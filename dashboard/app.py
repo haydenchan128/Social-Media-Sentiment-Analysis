@@ -6,11 +6,18 @@ import json
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = PROJECT_ROOT / "data" / "processed" / "sentiment_results.csv"
+
 VADER_METRICS_PATH = (
     PROJECT_ROOT / "data" / "processed" / "evaluation_report.json"
 )
 TRANSFORMER_METRICS_PATH = (
     PROJECT_ROOT / "data" / "processed" / "transformer_metrics.json"
+)
+VADER_PREDICTIONS_PATH = (
+    PROJECT_ROOT / "data" / "processed" / "tweeteval_predictions.csv"
+)
+TRANSFORMER_PREDICTIONS_PATH = (
+    PROJECT_ROOT / "data" / "processed" / "transformer_predictions.csv"
 )
 
 st.set_page_config(
@@ -44,6 +51,11 @@ def load_metrics(path: str, modified_time: float) -> dict:
     """Load model evaluation metrics from a JSON file."""
     with open(path, "r", encoding="utf-8") as file:
         return json.load(file)
+
+@st.cache_data
+def load_predictions(path: str, modified_time: float) -> pd.DataFrame:
+    """Load model predictions."""
+    return pd.read_csv(path)
 
 required_columns = {"text", "label"}
 missing_columns = required_columns - set(df.columns)
@@ -258,6 +270,113 @@ else:
         "TweetEval sentiment test split. Results may differ on other "
         "datasets and social media platforms."
     )
+
+# Model Prediction Explorer
+st.divider()
+st.header("Model Prediction Explorer")
+
+model_choice = st.selectbox(
+    "Choose a model",
+    ["VADER", "Transformer"],
+)
+
+if model_choice == "VADER":
+    prediction_path = VADER_PREDICTIONS_PATH
+else:
+    prediction_path = TRANSFORMER_PREDICTIONS_PATH
+
+if not prediction_path.exists():
+    st.warning(f"{model_choice} prediction file not found.")
+else:
+    predictions = load_predictions(
+        str(prediction_path),
+        prediction_path.stat().st_mtime,
+    )
+
+    required_columns = {
+        "text",
+        "true_label",
+        "predicted_label",
+    }
+
+    missing = required_columns - set(predictions.columns)
+
+    if missing:
+        st.error(
+            "Missing columns: " + ", ".join(sorted(missing))
+        )
+    else:
+        # Add a column showing whether the prediction was correct.
+        predictions["correct"] = (
+            predictions["true_label"]
+            == predictions["predicted_label"]
+        )
+
+        # Sentiment filter
+        available_sentiments = [
+            label
+            for label in ["negative", "neutral", "positive"]
+            if label in predictions["predicted_label"].unique()
+        ]
+
+        selected_labels = st.multiselect(
+            "Filter by predicted sentiment",
+            options=available_sentiments,
+            default=available_sentiments,
+        )
+
+        filtered_predictions = predictions[
+            predictions["predicted_label"].isin(selected_labels)
+        ].copy()
+
+        # Summary metrics
+        total = len(filtered_predictions)
+        correct = filtered_predictions["correct"].sum()
+
+        accuracy = (
+            correct / total * 100
+            if total > 0 else 0
+        )
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric("Posts", f"{total:,}")
+        col2.metric("Correct predictions", f"{correct:,}")
+        col3.metric("Accuracy", f"{accuracy:.2f}%")
+
+        # Display predictions
+        display_columns = [
+            "text",
+            "true_label",
+            "predicted_label",
+            "correct",
+        ]
+
+        if "confidence" in filtered_predictions.columns:
+            display_columns.append("confidence")
+
+        if "compound" in filtered_predictions.columns:
+            display_columns.append("compound")
+
+        st.subheader("Prediction Results")
+
+        st.dataframe(
+            filtered_predictions[display_columns],
+            width="stretch",
+            hide_index=True,
+        )
+
+        # Download predictions
+        csv_data = filtered_predictions.to_csv(
+            index=False
+        ).encode("utf-8")
+
+        st.download_button(
+            label="Download model predictions",
+            data=csv_data,
+            file_name=f"{model_choice.lower()}_predictions.csv",
+            mime="text/csv",
+        )
 
 # Post explorer
 st.subheader("Explore Posts")
