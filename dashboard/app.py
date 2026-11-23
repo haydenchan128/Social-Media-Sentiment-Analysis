@@ -150,7 +150,7 @@ if "platform" in filtered_df.columns:
     ).mul(100).round(2)
 
     st.caption("Percentages within each platform.")
-    st.dataframe(platform_counts, width=True)
+    st.dataframe(platform_counts, width="stretch")
 
 # Model Comparison
 st.divider()
@@ -398,7 +398,7 @@ display_columns = [
 
 st.dataframe(
     filtered_df[display_columns],
-    width=True,
+    width="stretch",
     hide_index=True,
 )
 
