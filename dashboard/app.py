@@ -378,6 +378,141 @@ else:
             mime="text/csv",
         )
 
+# Sentiment Error Analysis
+st.divider()
+st.header("Sentiment Error Analysis")
+
+if (
+    VADER_PREDICTIONS_PATH.exists()
+    and TRANSFORMER_PREDICTIONS_PATH.exists()
+):
+    vader_predictions = load_predictions(
+        str(VADER_PREDICTIONS_PATH),
+        VADER_PREDICTIONS_PATH.stat().st_mtime,
+    )
+
+    transformer_predictions = load_predictions(
+        str(TRANSFORMER_PREDICTIONS_PATH),
+        TRANSFORMER_PREDICTIONS_PATH.stat().st_mtime,
+    )
+
+    # Standardize prediction column names
+    vader_errors = vader_predictions[
+        ["text", "true_label", "predicted_label"]
+    ].copy()
+
+    transformer_errors = transformer_predictions[
+        ["text", "true_label", "predicted_label"]
+    ].copy()
+
+    # Identify correct and incorrect predictions
+    vader_errors["correct"] = (
+        vader_errors["true_label"]
+        == vader_errors["predicted_label"]
+    )
+
+    transformer_errors["correct"] = (
+        transformer_errors["true_label"]
+        == transformer_errors["predicted_label"]
+    )
+
+    # Overall error rates
+    vader_error_rate = (
+        (~vader_errors["correct"]).mean() * 100
+    )
+
+    transformer_error_rate = (
+        (~transformer_errors["correct"]).mean() * 100
+    )
+
+    col1, col2 = st.columns(2)
+
+    col1.metric(
+        "VADER Error Rate",
+        f"{vader_error_rate:.2f}%",
+    )
+
+    col2.metric(
+        "Transformer Error Rate",
+        f"{transformer_error_rate:.2f}%",
+        delta=f"{transformer_error_rate - vader_error_rate:.2f} percentage points",
+        delta_color="inverse",
+    )
+
+    # Error breakdown by actual sentiment
+    st.subheader("Errors by Actual Sentiment")
+
+    error_comparison = []
+
+    for sentiment in ["negative", "neutral", "positive"]:
+        vader_subset = vader_errors[
+            vader_errors["true_label"] == sentiment
+        ]
+
+        transformer_subset = transformer_errors[
+            transformer_errors["true_label"] == sentiment
+        ]
+
+        error_comparison.append({
+            "Sentiment": sentiment.capitalize(),
+            "VADER": (
+                (~vader_subset["correct"]).mean() * 100
+            ),
+            "Transformer": (
+                (~transformer_subset["correct"]).mean() * 100
+            ),
+        })
+
+    error_df = pd.DataFrame(error_comparison)
+
+    st.bar_chart(
+        error_df,
+        x="Sentiment",
+        y=["VADER", "Transformer"],
+        y_label="Error Rate (%)",
+    )
+
+    # Inspect incorrect predictions
+    st.subheader("Explore Misclassified Posts")
+
+    selected_model = st.selectbox(
+        "Choose model to inspect",
+        ["VADER", "Transformer"],
+        key="error_model",
+    )
+
+    selected_errors = (
+        vader_errors
+        if selected_model == "VADER"
+        else transformer_errors
+    )
+
+    incorrect_posts = selected_errors[
+        ~selected_errors["correct"]
+    ]
+
+    selected_sentiment = st.selectbox(
+        "Filter by actual sentiment",
+        ["All", "negative", "neutral", "positive"],
+        key="error_sentiment",
+    )
+
+    if selected_sentiment != "All":
+        incorrect_posts = incorrect_posts[
+            incorrect_posts["true_label"] == selected_sentiment
+        ]
+
+    st.write(f"Misclassified posts: {len(incorrect_posts):,}")
+
+    st.dataframe(
+        incorrect_posts.drop(columns=["correct"]),
+        width="stretch",
+        hide_index=True,
+    )
+
+else:
+    st.warning("Prediction files are missing.")
+
 # Post explorer
 st.subheader("Explore Posts")
 
