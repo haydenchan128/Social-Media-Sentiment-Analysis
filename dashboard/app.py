@@ -1,10 +1,17 @@
 from pathlib import Path
 import pandas as pd
 import streamlit as st
+import json
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = PROJECT_ROOT / "data" / "processed" / "sentiment_results.csv"
+VADER_METRICS_PATH = (
+    PROJECT_ROOT / "data" / "processed" / "evaluation_report.json"
+)
+TRANSFORMER_METRICS_PATH = (
+    PROJECT_ROOT / "data" / "processed" / "transformer_metrics.json"
+)
 
 st.set_page_config(
     page_title="Social Media Sentiment Analysis",
@@ -31,6 +38,12 @@ if not DATA_PATH.exists():
     st.stop()
 
 df = load_data(str(DATA_PATH), DATA_PATH.stat().st_mtime)
+
+@st.cache_data
+def load_metrics(path: str, modified_time: float) -> dict:
+    """Load model evaluation metrics from a JSON file."""
+    with open(path, "r", encoding="utf-8") as file:
+        return json.load(file)
 
 required_columns = {"text", "label"}
 missing_columns = required_columns - set(df.columns)
@@ -126,6 +139,125 @@ if "platform" in filtered_df.columns:
 
     st.caption("Percentages within each platform.")
     st.dataframe(platform_counts, width=True)
+
+# Model Comparison
+st.divider()
+st.header("Model Comparison")
+
+if not VADER_METRICS_PATH.exists() or not TRANSFORMER_METRICS_PATH.exists():
+    st.warning("Model evaluation files could not be found.")
+else:
+    vader_metrics = load_metrics(
+        str(VADER_METRICS_PATH),
+        VADER_METRICS_PATH.stat().st_mtime,
+    )
+
+    transformer_metrics = load_metrics(
+        str(TRANSFORMER_METRICS_PATH),
+        TRANSFORMER_METRICS_PATH.stat().st_mtime,
+    )
+
+    vader_report = vader_metrics["classification_report"]
+    transformer_report = transformer_metrics["classification_report"]
+
+    # Accuracy comparison
+    st.subheader("Overall Accuracy")
+
+    accuracy_df = pd.DataFrame({
+        "Model": ["VADER", "Transformer"],
+        "Accuracy": [
+            vader_metrics["accuracy"] * 100,
+            transformer_metrics["accuracy"] * 100,
+        ],
+    })
+
+    col1, col2 = st.columns(2)
+
+    col1.metric(
+        "VADER Accuracy",
+        f"{vader_metrics['accuracy']:.2%}",
+    )
+
+    col2.metric(
+        "Transformer Accuracy",
+        f"{transformer_metrics['accuracy']:.2%}",
+        delta=f"{(
+            transformer_metrics['accuracy'] - vader_metrics['accuracy']
+        ) * 100:.2f} percentage points",
+    )
+
+    st.bar_chart(
+        accuracy_df,
+        x="Model",
+        y="Accuracy",
+        y_label="Accuracy (%)",
+    )
+
+    # Per-class metric comparison
+    st.subheader("Performance by Sentiment")
+
+    selected_metric = st.selectbox(
+        "Select evaluation metric",
+        ["precision", "recall", "f1-score"],
+        index=2,
+    )
+
+    sentiment_labels = ["negative", "neutral", "positive"]
+
+    comparison_data = []
+
+    for sentiment in sentiment_labels:
+        comparison_data.append({
+            "Sentiment": sentiment.capitalize(),
+            "VADER": vader_report[sentiment][selected_metric] * 100,
+            "Transformer": (
+                transformer_report[sentiment][selected_metric] * 100
+            ),
+        })
+
+    comparison_df = pd.DataFrame(comparison_data)
+
+    st.bar_chart(
+        comparison_df,
+        x="Sentiment",
+        y=["VADER", "Transformer"],
+        y_label=f"{selected_metric.capitalize()} (%)",
+    )
+
+    # Confusion matrices
+    st.subheader("Confusion Matrices")
+
+    vader_matrix_path = (
+        PROJECT_ROOT / "data" / "processed" / "confusion_matrix.csv"
+    )
+
+    transformer_matrix_path = (
+        PROJECT_ROOT
+        / "data"
+        / "processed"
+        / "transformer_confusion_matrix.csv"
+    )
+
+    matrix_col1, matrix_col2 = st.columns(2)
+
+    if vader_matrix_path.exists():
+        vader_matrix = pd.read_csv(vader_matrix_path, index_col=0)
+        matrix_col1.write("VADER")
+        matrix_col1.dataframe(vader_matrix, width="stretch")
+
+    if transformer_matrix_path.exists():
+        transformer_matrix = pd.read_csv(
+            transformer_matrix_path,
+            index_col=0,
+        )
+        matrix_col2.write("Transformer")
+        matrix_col2.dataframe(transformer_matrix, width="stretch")
+
+    st.caption(
+        "Both models were evaluated on the same 12,284-example "
+        "TweetEval sentiment test split. Results may differ on other "
+        "datasets and social media platforms."
+    )
 
 # Post explorer
 st.subheader("Explore Posts")
