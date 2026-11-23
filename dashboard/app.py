@@ -125,7 +125,7 @@ if "platform" in filtered_df.columns:
     ).mul(100).round(2)
 
     st.caption("Percentages within each platform.")
-    st.dataframe(platform_counts, use_container_width=True)
+    st.dataframe(platform_counts, width=True)
 
 # Post explorer
 st.subheader("Explore Posts")
@@ -147,7 +147,7 @@ display_columns = [
 
 st.dataframe(
     filtered_df[display_columns],
-    use_container_width=True,
+    width=True,
     hide_index=True,
 )
 
