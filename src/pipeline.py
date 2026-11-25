@@ -1,40 +1,65 @@
 import pandas as pd
+from pathlib import Path
 
 from src.preprocessing import clean_text
 from src.sentiment import SentimentAnalyzer
 from src.validation import validate_input_data
+from src.ingestion import load_platform_data, combine_platform_data
 
 
-def run_pipeline(input_path: str, output_path: str):
-    """Run the complete sentiment analysis pipeline."""
-
-    df = pd.read_csv(input_path)
+def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
+    """Analyze sentiment for a DataFrame and save the results."""
     df = validate_input_data(df)
 
-    # Clean text
     df["clean_text"] = df["text"].apply(clean_text)
 
-    # Sentiment analysis
     analyzer = SentimentAnalyzer()
     results = df["clean_text"].apply(analyzer.analyze)
+
     sentiment_df = pd.DataFrame(results.tolist())
-
     df = pd.concat([df, sentiment_df], axis=1)
-    df.to_csv(output_path, index=False)
 
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    df.to_csv(output_path, index=False)
     return df
 
 
+def run_pipeline(input_path: str, output_path: str) -> pd.DataFrame:
+    """Load one CSV file, analyze sentiment, and save results."""
+    df = pd.read_csv(input_path)
+    return analyze_dataframe(df, output_path)
+
+
+def run_multi_platform_pipeline(
+    input_files: dict[str, str],
+    output_path: str
+) -> pd.DataFrame:
+    """Load, combine, and analyze data from multiple platforms."""
+    if not input_files:
+        raise ValueError("No input files provided.")
+
+    datasets = [
+        load_platform_data(file_path, platform)
+        for platform, file_path in input_files.items()
+    ]
+
+    combined_df = combine_platform_data(datasets)
+
+    return analyze_dataframe(combined_df, output_path)
+
+
 if __name__ == "__main__":
-    output_path = "data/processed/sentiment_results.csv"
+    input_files = {
+        "reddit": "data/raw/reddit_sample.csv",
+        "tiktok": "data/raw/tiktok_sample.csv",
+        "facebook": "data/raw/facebook_sample.csv",
+    }
 
-    import os
-    os.makedirs("data/processed", exist_ok=True)
+    output_path = "data/processed/multi_platform_results.csv"
 
-    df = run_pipeline(
-        "data/raw/social_media.csv",
-        output_path,
-    )
+    df = run_multi_platform_pipeline(input_files, output_path)
 
     print(f"Processed {len(df)} posts.")
     print("\nSentiment distribution:")
