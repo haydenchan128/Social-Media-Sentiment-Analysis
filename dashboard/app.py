@@ -513,6 +513,156 @@ if (
 else:
     st.warning("Prediction files are missing.")
 
+# Model Disagreement Analysis
+st.divider()
+st.header("Model Disagreement Analysis")
+
+if (
+    VADER_PREDICTIONS_PATH.exists()
+    and TRANSFORMER_PREDICTIONS_PATH.exists()
+):
+    vader_predictions = load_predictions(
+        str(VADER_PREDICTIONS_PATH),
+        VADER_PREDICTIONS_PATH.stat().st_mtime,
+    )
+
+    transformer_predictions = load_predictions(
+        str(TRANSFORMER_PREDICTIONS_PATH),
+        TRANSFORMER_PREDICTIONS_PATH.stat().st_mtime,
+    )
+
+    # Verify that both files contain the same test examples.
+    same_examples = (
+        len(vader_predictions) == len(transformer_predictions)
+        and vader_predictions["text"].equals(
+            transformer_predictions["text"]
+        )
+        and vader_predictions["true_label"].equals(
+            transformer_predictions["true_label"]
+        )
+    )
+
+    if not same_examples:
+        st.error(
+            "The prediction files do not contain matching examples "
+            "in the same order. Cannot compare disagreements safely."
+        )
+    else:
+        # Create a combined comparison dataframe.
+        comparison = pd.DataFrame({
+            "text": vader_predictions["text"],
+            "true_label": vader_predictions["true_label"],
+            "vader_prediction": vader_predictions["predicted_label"],
+            "transformer_prediction": (
+                transformer_predictions["predicted_label"]
+            ),
+        })
+
+        comparison["disagreement"] = (
+            comparison["vader_prediction"]
+            != comparison["transformer_prediction"]
+        )
+
+        disagreements = comparison[
+            comparison["disagreement"]
+        ].copy()
+
+        agreement_count = len(comparison) - len(disagreements)
+
+        agreement_rate = (
+            agreement_count / len(comparison) * 100
+            if len(comparison) > 0 else 0
+        )
+
+        disagreement_rate = (
+            len(disagreements) / len(comparison) * 100
+            if len(comparison) > 0 else 0
+        )
+
+        # Summary metrics
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Total Posts",
+            f"{len(comparison):,}",
+        )
+
+        col2.metric(
+            "Agreement Rate",
+            f"{agreement_rate:.2f}%",
+        )
+
+        col3.metric(
+            "Disagreement Rate",
+            f"{disagreement_rate:.2f}%",
+        )
+
+        # Disagreement breakdown
+        st.subheader("Disagreements by Sentiment")
+
+        disagreement_counts = (
+            disagreements.groupby("true_label")
+            .size()
+            .reindex(
+                ["negative", "neutral", "positive"],
+                fill_value=0,
+            )
+            .rename_axis("Actual Sentiment")
+            .reset_index(name="Disagreements")
+        )
+
+        st.bar_chart(
+            disagreement_counts,
+            x="Actual Sentiment",
+            y="Disagreements",
+        )
+
+        # Filter disagreements
+        st.subheader("Explore Disagreements")
+
+        selected_actual = st.selectbox(
+            "Filter by actual sentiment",
+            ["All", "negative", "neutral", "positive"],
+            key="disagreement_sentiment",
+        )
+
+        if selected_actual != "All":
+            disagreements = disagreements[
+                disagreements["true_label"] == selected_actual
+            ]
+
+        st.write(
+            f"Showing {len(disagreements):,} disagreements."
+        )
+
+        st.dataframe(
+            disagreements[
+                [
+                    "text",
+                    "true_label",
+                    "vader_prediction",
+                    "transformer_prediction",
+                ]
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+
+        # Download disagreements
+        csv_data = disagreements.to_csv(
+            index=False
+        ).encode("utf-8")
+
+        st.download_button(
+            "Download disagreements",
+            data=csv_data,
+            file_name="model_disagreements.csv",
+            mime="text/csv",
+        )
+
+else:
+    st.warning("Prediction files are missing.")
+
 # Post explorer
 st.subheader("Explore Posts")
 
