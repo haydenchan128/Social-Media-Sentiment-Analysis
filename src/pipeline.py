@@ -2,15 +2,14 @@ import pandas as pd
 
 from src.preprocessing import clean_text
 from src.sentiment import SentimentAnalyzer
+from src.validation import validate_input_data
 
 
 def run_pipeline(input_path: str, output_path: str):
     """Run the complete sentiment analysis pipeline."""
 
     df = pd.read_csv(input_path)
-
-    if "text" not in df.columns:
-        raise ValueError("Dataset must contain a 'text' column.")
+    df = validate_input_data(df)
 
     # Clean text
     df["clean_text"] = df["text"].apply(clean_text)
