@@ -1,4 +1,3 @@
-
 import unittest
 import pandas as pd
 import tempfile
@@ -66,6 +65,32 @@ class TestIngestion(unittest.TestCase):
     def test_empty_dataset_list(self):
         with self.assertRaises(ValueError):
             combine_platform_data([])
+
+    def test_empty_csv(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "empty.csv"
+            file_path.write_text("")
+
+            with self.assertRaisesRegex(ValueError, "empty"):
+                load_platform_data(file_path, "Reddit")
+
+
+    def test_csv_with_headers_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "empty.csv"
+            file_path.write_text("text,platform\n")
+
+            with self.assertRaisesRegex(ValueError, "no data rows"):
+                load_platform_data(file_path, "Reddit")
+
+
+    def test_malformed_csv(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "malformed.csv"
+            file_path.write_text('text,platform\n"Unclosed quote,Reddit\n')
+
+            with self.assertRaisesRegex(ValueError, "Malformed CSV"):
+                load_platform_data(file_path, "Reddit")
 
 
 if __name__ == "__main__":
