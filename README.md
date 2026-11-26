@@ -40,3 +40,36 @@ The largest improvement was in positive sentiment, suggesting that the transform
 On the TweetEval test split, the transformer outperformed the rule-based VADER baseline in accuracy and per-class F1 scores. This comparison demonstrates the potential benefits of pretrained transformer models for social media sentiment analysis.
 
 These results apply to the evaluated dataset and may not generalize to other platforms or datasets. Because the transformer was pretrained and fine-tuned for Twitter sentiment, its performance should be interpreted in that context.
+
+
+## Running the Dashboard with Docker
+
+This project supports Docker, allowing you to run the Streamlit dashboard in an isolated environment without installing the project's Python dependencies locally.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+### Build the Docker Image
+
+From the project's root directory, run:
+
+```bash
+docker build -t sentiment-analysis .
+```
+
+### Run the Dashboard
+
+```bash
+docker run -p 8501:8501 \
+  -v "$(pwd)/data/processed:/app/data/processed:ro" \
+  sentiment-analysis
+```
+
+### Access the Dashboard
+
+Open the following URL in your browser:
+
+http://localhost:8501
+
+To stop the dashboard, press `Ctrl + C` in the terminal running the container.
