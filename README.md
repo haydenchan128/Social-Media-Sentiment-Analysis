@@ -44,27 +44,21 @@ These results apply to the evaluated dataset and may not generalize to other pla
 
 ## Running the Dashboard with Docker
 
-This project supports Docker, allowing you to run the Streamlit dashboard in an isolated environment without installing the project's Python dependencies locally.
+This project supports Docker Compose, allowing you to run the Streamlit dashboard in an isolated environment without manually installing the project's Python dependencies.
 
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-### Build the Docker Image
+### Start the Dashboard
 
 From the project's root directory, run:
 
 ```bash
-docker build -t sentiment-analysis .
+docker compose up --build
 ```
 
-### Run the Dashboard
-
-```bash
-docker run -p 8501:8501 \
-  -v "$(pwd)/data/processed:/app/data/processed:ro" \
-  sentiment-analysis
-```
+Docker Compose automatically builds the image and starts the dashboard.
 
 ### Access the Dashboard
 
@@ -72,4 +66,10 @@ Open the following URL in your browser:
 
 http://localhost:8501
 
-To stop the dashboard, press `Ctrl + C` in the terminal running the container.
+### Stop the Dashboard
+
+Press `Ctrl + C` in the terminal, then run:
+
+```bash
+docker compose down
+```
