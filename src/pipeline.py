@@ -5,25 +5,43 @@ from src.preprocessing import clean_text
 from src.sentiment import SentimentAnalyzer
 from src.validation import validate_input_data
 from src.ingestion import load_platform_data, combine_platform_data
+from src.logger import setup_logger
+
+
+logger = setup_logger()
 
 
 def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
     """Analyze sentiment for a DataFrame and save the results."""
-    df = validate_input_data(df)
 
-    df["clean_text"] = df["text"].apply(clean_text)
+    logger.info("Starting sentiment analysis.")
 
-    analyzer = SentimentAnalyzer()
-    results = df["clean_text"].apply(analyzer.analyze)
+    try:
+        df = validate_input_data(df)
 
-    sentiment_df = pd.DataFrame(results.tolist())
-    df = pd.concat([df, sentiment_df], axis=1)
+        logger.info("Validated %s posts.", len(df))
 
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+        df["clean_text"] = df["text"].apply(clean_text)
 
-    df.to_csv(output_path, index=False)
-    return df
+        analyzer = SentimentAnalyzer()
+        results = df["clean_text"].apply(analyzer.analyze)
+
+        sentiment_df = pd.DataFrame(results.tolist())
+        df = pd.concat([df, sentiment_df], axis=1)
+
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        df.to_csv(output_path, index=False)
+
+        logger.info("Processed %s posts.", len(df))
+        logger.info("Results saved to %s", output_path)
+
+        return df
+
+    except Exception:
+        logger.exception("Sentiment analysis failed.")
+        raise
 
 
 def run_pipeline(input_path: str, output_path: str) -> pd.DataFrame:
