@@ -1,0 +1,8 @@
+services:
+  dashboard:
+    build: .
+    image: sentiment-analysis
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data/processed:/app/data/processed:ro
