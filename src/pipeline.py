@@ -46,8 +46,28 @@ def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
 
 def run_pipeline(input_path: str, output_path: str) -> pd.DataFrame:
     """Load one CSV file, analyze sentiment, and save results."""
-    df = pd.read_csv(input_path)
-    return analyze_dataframe(df, output_path)
+
+    try:
+        logger.info("Loading dataset from %s", input_path)
+        df = pd.read_csv(input_path, on_bad_lines="error")
+        logger.info("Successfully loaded dataset.")
+        return analyze_dataframe(df, output_path)
+
+    except pd.errors.EmptyDataError as exc:
+        logger.exception("CSV file is empty: %s", input_path)
+        raise ValueError("CSV file is empty or has no header.") from exc
+
+    except pd.errors.ParserError as exc:
+        logger.exception("Malformed CSV file: %s", input_path)
+        raise ValueError(f"Malformed CSV file: {input_path}") from exc
+
+    except UnicodeDecodeError as exc:
+        logger.exception("Unable to decode CSV file: %s", input_path)
+        raise ValueError("CSV file has an unsupported text encoding.") from exc
+
+    except Exception:
+        logger.exception("Failed to run pipeline on %s", input_path)
+        raise
 
 
 def run_multi_platform_pipeline(
@@ -55,17 +75,29 @@ def run_multi_platform_pipeline(
     output_path: str
 ) -> pd.DataFrame:
     """Load, combine, and analyze data from multiple platforms."""
+
     if not input_files:
         raise ValueError("No input files provided.")
 
-    datasets = [
-        load_platform_data(file_path, platform)
-        for platform, file_path in input_files.items()
-    ]
+    try:
+        logger.info(
+            "Starting multi-platform pipeline with %s datasets.",
+            len(input_files)
+        )
 
-    combined_df = combine_platform_data(datasets)
+        datasets = [
+            load_platform_data(file_path, platform)
+            for platform, file_path in input_files.items()
+        ]
 
-    return analyze_dataframe(combined_df, output_path)
+        logger.info("Successfully loaded all platform datasets.")
+        combined_df = combine_platform_data(datasets)
+        logger.info("Combined %s posts.", len(combined_df))
+        return analyze_dataframe(combined_df, output_path)
+
+    except Exception:
+        logger.exception("Multi-platform pipeline failed.")
+        raise
 
 
 if __name__ == "__main__":

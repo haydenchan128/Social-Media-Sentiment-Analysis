@@ -33,6 +33,36 @@ class TestPipeline(unittest.TestCase):
         self.assertIn("label", result.columns)
         self.assertTrue(output_path.exists())
 
+    def test_run_pipeline_missing_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "missing.csv"
+            output_path = Path(temp_dir) / "output.csv"
+
+            with self.assertRaises(FileNotFoundError):
+                run_pipeline(input_path, output_path)
+
+
+    def test_run_pipeline_empty_csv(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "empty.csv"
+            output_path = Path(temp_dir) / "output.csv"
+
+            input_path.write_text("")
+
+            with self.assertRaises(ValueError):
+                run_pipeline(input_path, output_path)
+
+
+    def test_run_pipeline_malformed_csv(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "malformed.csv"
+            output_path = Path(temp_dir) / "output.csv"
+
+            input_path.write_text('text,platform\n"Unclosed quote,Reddit\n')
+
+            with self.assertRaisesRegex(ValueError, "Malformed CSV"):
+                run_pipeline(input_path, output_path)
+
     def test_multi_platform_pipeline(self):
         reddit_path = self.test_dir / "reddit.csv"
         tiktok_path = self.test_dir / "tiktok.csv"
