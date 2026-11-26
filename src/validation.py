@@ -1,11 +1,10 @@
 import pandas as pd
 
-
 REQUIRED_COLUMNS = {"text"}
 
 
 def validate_input_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Validate input data before sentiment analysis."""
+    """Validate and clean input data before sentiment analysis."""
 
     if df.empty:
         raise ValueError("Input dataset is empty.")
@@ -17,13 +16,21 @@ def validate_input_data(df: pd.DataFrame) -> pd.DataFrame:
             f"Missing required columns: {', '.join(sorted(missing_columns))}"
         )
 
-    if df["text"].isna().all():
-        raise ValueError("The text column contains no usable values.")
+    # Reject non-string values
+    if not df["text"].dropna().map(
+        lambda value: isinstance(value, str)
+    ).all():
+        raise ValueError("All non-missing values in the text column must be strings.")
 
-    if not df["text"].map(lambda value: isinstance(value, str)).all():
-        raise ValueError("All values in the text column must be strings.")
+    # Remove missing and blank text
+    valid_text = (
+        df["text"].notna()
+        & df["text"].str.strip().ne("")
+    )
 
-    if df["text"].str.strip().eq("").all():
-        raise ValueError("The text column contains only empty strings.")
+    df = df.loc[valid_text].copy()
 
-    return df.copy()
+    if df.empty:
+        raise ValueError("No usable text values found in the dataset.")
+
+    return df.reset_index(drop=True)
