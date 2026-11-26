@@ -100,6 +100,17 @@ class TestPipeline(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_multi_platform_pipeline({}, str(output_path))
 
+    def test_failed_pipeline_does_not_create_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "invalid.csv"
+            output_path = Path(temp_dir) / "output" / "results.csv"
+
+            input_path.write_text("message\nHello world\n")
+
+            with self.assertRaisesRegex(ValueError, "text"):
+                run_pipeline(input_path, output_path)
+
+            self.assertFalse(output_path.exists())    
 
 if __name__ == "__main__":
     unittest.main()
