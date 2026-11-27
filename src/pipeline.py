@@ -7,7 +7,7 @@ from src.validation import validate_input_data
 from src.ingestion import load_platform_data, combine_platform_data
 from src.logger import setup_logger
 from src.deduplication import remove_duplicate_posts
-from src.data_summary import summarize_dataset
+from src.data_summary import summarize_dataset, save_dataset_summary
 
 
 logger = setup_logger()
@@ -35,6 +35,10 @@ def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
 
         summary = summarize_dataset(df)
         logger.info("Dataset summary: %s", summary)
+
+        summary_path = Path("data/processed/dataset_summary.json")
+        save_dataset_summary(summary, summary_path)
+        logger.info("Dataset summary saved to %s", summary_path)    
 
         df["clean_text"] = df["text"].apply(clean_text)
 

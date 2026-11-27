@@ -1,7 +1,10 @@
 import unittest
 import pandas as pd
+import json
+import tempfile
+from pathlib import Path
 
-from src.data_summary import summarize_dataset
+from src.data_summary import summarize_dataset, save_dataset_summary
 
 
 class TestDataSummary(unittest.TestCase):
@@ -47,6 +50,35 @@ class TestDataSummary(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "text"):
             summarize_dataset(df)
+
+    def test_save_dataset_summary(self):
+        summary = {
+            "total_posts": 10,
+            "missing_text": 0,
+            "unique_posts": 8,
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "summary.json"
+
+            save_dataset_summary(summary, output_path)
+
+            self.assertTrue(output_path.exists())
+
+            with output_path.open(encoding="utf-8") as file:
+                saved_summary = json.load(file)
+
+            self.assertEqual(saved_summary, summary)
+
+    def test_save_summary_creates_parent_directory(self):
+        summary = {"total_posts": 5}
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "nested" / "summary.json"
+
+            save_dataset_summary(summary, output_path)
+
+            self.assertTrue(output_path.exists())
 
 
 if __name__ == "__main__":
