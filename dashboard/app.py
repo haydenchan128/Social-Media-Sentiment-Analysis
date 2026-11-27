@@ -60,6 +60,13 @@ remove_duplicates = st.sidebar.checkbox(
     value=True,
 )
 
+selected_model = st.sidebar.selectbox(
+    "Sentiment analysis model",
+    options=["VADER", "Transformer"],
+    index=0,
+    help="Choose which model will analyze the selected posts.",
+)
+
 st.sidebar.divider()
 
 if st.sidebar.button("Run Sentiment Analysis", type="primary"):
@@ -77,6 +84,7 @@ if st.sidebar.button("Run Sentiment Analysis", type="primary"):
                     input_files=input_files,
                     output_path=str(PIPELINE_OUTPUT_PATH),
                     remove_duplicates=remove_duplicates,
+                    model=selected_model.lower(),
                 )
 
             st.session_state["pipeline_message"] = (
