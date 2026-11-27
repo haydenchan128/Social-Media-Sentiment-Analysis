@@ -6,6 +6,7 @@ from src.sentiment import SentimentAnalyzer
 from src.validation import validate_input_data
 from src.ingestion import load_platform_data, combine_platform_data
 from src.logger import setup_logger
+from src.deduplication import remove_duplicate_posts
 
 
 logger = setup_logger()
@@ -18,8 +19,13 @@ def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
 
     try:
         df = validate_input_data(df)
-
         logger.info("Validated %s posts.", len(df))
+
+        original_count = len(df)
+        df = remove_duplicate_posts(df)
+        duplicates_removed = original_count - len(df)
+
+        logger.info("Removed %s duplicate posts.", duplicates_removed)
 
         df["clean_text"] = df["text"].apply(clean_text)
 
