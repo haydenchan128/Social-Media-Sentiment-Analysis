@@ -22,10 +22,15 @@ def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
         logger.info("Validated %s posts.", len(df))
 
         original_count = len(df)
-        df = remove_duplicate_posts(df)
-        duplicates_removed = original_count - len(df)
 
-        logger.info("Removed %s duplicate posts.", duplicates_removed)
+        df = remove_duplicate_posts(df)
+
+        duplicates_removed = original_count - len(df)
+        remaining_count = len(df)
+
+        logger.info("Original post count: %s", original_count)
+        logger.info("Duplicate posts removed: %s", duplicates_removed)
+        logger.info("Posts remaining: %s", remaining_count)
 
         df["clean_text"] = df["text"].apply(clean_text)
 
