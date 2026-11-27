@@ -80,6 +80,37 @@ class TestDataSummary(unittest.TestCase):
 
             self.assertTrue(output_path.exists())
 
+    def test_platform_summary(self):
+        df = pd.DataFrame({
+            "text": [
+                "Great post!",
+                "Another post!",
+                "Great post!",
+                "Interesting video!",
+            ],
+            "platform": [
+                "reddit",
+                "reddit",
+                "reddit",
+                "tiktok",
+            ],
+        })
+
+        result = summarize_dataset(df)
+
+        self.assertEqual(
+            result["platform_summary"]["reddit"]["total_posts"], 3
+        )
+        self.assertEqual(
+            result["platform_summary"]["reddit"]["unique_posts"], 2
+        )
+        self.assertEqual(
+            result["platform_summary"]["tiktok"]["total_posts"], 1
+        )
+        self.assertEqual(
+            result["platform_summary"]["tiktok"]["unique_posts"], 1
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
