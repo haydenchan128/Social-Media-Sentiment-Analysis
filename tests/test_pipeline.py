@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.pipeline import run_pipeline, run_multi_platform_pipeline
+from src.pipeline import run_pipeline, run_multi_platform_pipeline, analyze_dataframe
 
 
 class TestPipeline(unittest.TestCase):
@@ -111,6 +111,25 @@ class TestPipeline(unittest.TestCase):
                 run_pipeline(input_path, output_path)
 
             self.assertFalse(output_path.exists())    
+
+    def test_pipeline_preserves_platform_metadata(self):
+        df = pd.DataFrame({
+            "text": ["I love this!"],
+            "platform": ["reddit"],
+            "source_file": ["reddit_sample.csv"]
+        })
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "results.csv"
+
+            result = analyze_dataframe(df, output_path)
+
+            self.assertEqual(result["platform"].iloc[0], "reddit")
+            self.assertEqual(
+                result["source_file"].iloc[0],
+                "reddit_sample.csv"
+            )
+            self.assertTrue(output_path.exists())
 
 if __name__ == "__main__":
     unittest.main()

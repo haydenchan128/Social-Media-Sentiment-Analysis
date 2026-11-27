@@ -151,5 +151,18 @@ class TestIngestion(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "platform"):
             combine_platform_data([df])
 
+    def test_source_file_is_preserved(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "reddit_sample.csv"
+            file_path.write_text("text\nGreat post!\n")
+
+            result = load_platform_data(file_path, "Reddit")
+
+            self.assertIn("source_file", result.columns)
+            self.assertEqual(
+                result["source_file"].iloc[0],
+                "reddit_sample.csv"
+            )
+
 if __name__ == "__main__":
     unittest.main()

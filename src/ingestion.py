@@ -40,6 +40,9 @@ def load_platform_data(file_path: str, platform: str) -> pd.DataFrame:
     df = df.copy()
     df["platform"] = platform.lower().strip()
 
+    # Preserve the original CSV filename as the source
+    df["source_file"] = file_path.name
+
     return df
 
 
