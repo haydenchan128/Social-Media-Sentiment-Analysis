@@ -7,6 +7,7 @@ from src.validation import validate_input_data
 from src.ingestion import load_platform_data, combine_platform_data
 from src.logger import setup_logger
 from src.deduplication import remove_duplicate_posts
+from src.data_summary import summarize_dataset
 
 
 logger = setup_logger()
@@ -31,6 +32,9 @@ def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
         logger.info("Original post count: %s", original_count)
         logger.info("Duplicate posts removed: %s", duplicates_removed)
         logger.info("Posts remaining: %s", remaining_count)
+
+        summary = summarize_dataset(df)
+        logger.info("Dataset summary: %s", summary)
 
         df["clean_text"] = df["text"].apply(clean_text)
 
