@@ -44,9 +44,32 @@ def load_platform_data(file_path: str, platform: str) -> pd.DataFrame:
 
 
 def combine_platform_data(datasets: list[pd.DataFrame]) -> pd.DataFrame:
-    """Combine datasets from multiple social media platforms."""
+    """Combine and validate datasets from multiple social media platforms."""
 
     if not datasets:
         raise ValueError("No datasets provided.")
 
-    return pd.concat(datasets, ignore_index=True)
+    for index, df in enumerate(datasets):
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError(
+                f"Dataset at index {index} must be a pandas DataFrame."
+            )
+
+        if df.empty:
+            raise ValueError(
+                f"Dataset at index {index} is empty."
+            )
+
+        if "text" not in df.columns:
+            raise ValueError(
+                f"Dataset at index {index} is missing the 'text' column."
+            )
+
+        if "platform" not in df.columns:
+            raise ValueError(
+                f"Dataset at index {index} is missing the 'platform' column."
+            )
+
+    combined_df = pd.concat(datasets, ignore_index=True, sort=False)
+
+    return combined_df

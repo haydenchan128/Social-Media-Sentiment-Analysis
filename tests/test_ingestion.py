@@ -110,7 +110,46 @@ class TestIngestion(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "duplicate"):
                 load_platform_data(file_path, "Reddit")
-                
+
+    def test_combine_different_platform_columns(self):
+        reddit = pd.DataFrame({
+            "text": ["Great post!"],
+            "platform": ["reddit"],
+            "subreddit": ["Python"]
+        })
+
+        tiktok = pd.DataFrame({
+            "text": ["Love this!"],
+            "platform": ["tiktok"],
+            "video_id": ["123"]
+        })
+
+        result = combine_platform_data([reddit, tiktok])
+
+        self.assertEqual(len(result), 2)
+        self.assertIn("subreddit", result.columns)
+        self.assertIn("video_id", result.columns)
+        self.assertTrue(pd.isna(result.loc[1, "subreddit"]))
+        self.assertTrue(pd.isna(result.loc[0, "video_id"]))
+
+    def test_combine_rejects_empty_dataset(self):
+        valid = pd.DataFrame({
+            "text": ["Hello"],
+            "platform": ["reddit"]
+        })
+
+        empty = pd.DataFrame(columns=["text", "platform"])
+
+        with self.assertRaisesRegex(ValueError, "empty"):
+            combine_platform_data([valid, empty])
+
+    def test_combine_rejects_missing_platform_column(self):
+        df = pd.DataFrame({
+            "text": ["Hello"]
+        })
+
+        with self.assertRaisesRegex(ValueError, "platform"):
+            combine_platform_data([df])
 
 if __name__ == "__main__":
     unittest.main()
