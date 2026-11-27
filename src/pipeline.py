@@ -15,7 +15,11 @@ from src.data_summary import summarize_dataset, save_dataset_summary
 logger = setup_logger()
 
 
-def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
+def analyze_dataframe(
+    df: pd.DataFrame,
+    output_path: str,
+    remove_duplicates: bool = True,
+) -> pd.DataFrame:
     """Analyze sentiment for a DataFrame and save the results."""
 
     logger.info("Starting sentiment analysis.")
@@ -26,14 +30,14 @@ def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
 
         original_count = len(df)
 
-        df = remove_duplicate_posts(df)
+        if remove_duplicates:
+            df = remove_duplicate_posts(df)
 
         duplicates_removed = original_count - len(df)
-        remaining_count = len(df)
 
         logger.info("Original post count: %s", original_count)
         logger.info("Duplicate posts removed: %s", duplicates_removed)
-        logger.info("Posts remaining: %s", remaining_count)
+        logger.info("Posts remaining: %s", len(df))
 
         summary = summarize_dataset(df)
         logger.info("Dataset summary: %s", summary)
@@ -65,14 +69,22 @@ def analyze_dataframe(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
         raise
 
 
-def run_pipeline(input_path: str, output_path: str) -> pd.DataFrame:
+def run_pipeline(
+    input_path: str,
+    output_path: str,
+    remove_duplicates: bool = True,
+) -> pd.DataFrame:
     """Load one CSV file, analyze sentiment, and save results."""
 
     try:
         logger.info("Loading dataset from %s", input_path)
         df = pd.read_csv(input_path, on_bad_lines="error")
         logger.info("Successfully loaded dataset.")
-        return analyze_dataframe(df, output_path)
+        return analyze_dataframe(
+            df,
+            output_path,
+            remove_duplicates=remove_duplicates,
+        )
 
     except pd.errors.EmptyDataError as exc:
         logger.exception("CSV file is empty: %s", input_path)
@@ -93,7 +105,8 @@ def run_pipeline(input_path: str, output_path: str) -> pd.DataFrame:
 
 def run_multi_platform_pipeline(
     input_files: dict[str, str],
-    output_path: str
+    output_path: str,
+    remove_duplicates: bool = True,
 ) -> pd.DataFrame:
     """Load, combine, and analyze data from multiple platforms."""
 
@@ -114,7 +127,11 @@ def run_multi_platform_pipeline(
         logger.info("Successfully loaded all platform datasets.")
         combined_df = combine_platform_data(datasets)
         logger.info("Combined %s posts.", len(combined_df))
-        return analyze_dataframe(combined_df, output_path)
+        return analyze_dataframe(
+            combined_df,
+            output_path,
+            remove_duplicates=remove_duplicates,
+        )
 
     except Exception:
         logger.exception("Multi-platform pipeline failed.")
@@ -147,7 +164,14 @@ def main():
         help="Path to save the sentiment analysis results."
     )
 
+    parser.add_argument(
+        "--keep-duplicates",
+        action="store_true",
+        help="Keep duplicate posts instead of removing them.",
+    )
+
     args = parser.parse_args()
+    remove_duplicates = not args.keep_duplicates
 
     input_files = {
         platform: file_path
@@ -165,10 +189,18 @@ def main():
     if len(input_files) == 1:
         platform, input_path = next(iter(input_files.items()))
         logger.info("Running single-platform pipeline: %s", platform)
-        df = run_pipeline(input_path, args.output)
+        df = run_pipeline(
+            input_path,
+            args.output,
+            remove_duplicates=remove_duplicates,
+        )
     else:
         logger.info("Running multi-platform pipeline.")
-        df = run_multi_platform_pipeline(input_files, args.output)
+        df = run_multi_platform_pipeline(
+            input_files,
+            args.output,
+            remove_duplicates=remove_duplicates,
+        )
 
     print(f"Processed {len(df)} posts.")
     print(f"Results saved to {args.output}")

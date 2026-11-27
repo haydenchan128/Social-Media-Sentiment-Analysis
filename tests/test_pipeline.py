@@ -153,6 +153,27 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(len(result), 2)
             self.assertTrue(output_path.exists())
 
+    def test_pipeline_can_keep_duplicates(self):
+        df = pd.DataFrame({
+            "text": [
+                "I love this!",
+                "I love this!",
+                "This is terrible!",
+            ],
+            "platform": ["reddit", "reddit", "reddit"],
+        })
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "results.csv"
+
+            result = analyze_dataframe(
+                df,
+                str(output_path),
+                remove_duplicates=False,
+            )
+
+            self.assertEqual(len(result), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
