@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import argparse
 
 from src.preprocessing import clean_text
 from src.sentiment import SentimentAnalyzer
@@ -8,6 +9,7 @@ from src.ingestion import load_platform_data, combine_platform_data
 from src.logger import setup_logger
 from src.deduplication import remove_duplicate_posts
 from src.data_summary import summarize_dataset, save_dataset_summary
+
 
 
 logger = setup_logger()
@@ -119,18 +121,58 @@ def run_multi_platform_pipeline(
         raise
 
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(
+        description="Run social media sentiment analysis."
+    )
+
+    parser.add_argument(
+        "--reddit",
+        help="Path to the Reddit CSV file."
+    )
+
+    parser.add_argument(
+        "--tiktok",
+        help="Path to the TikTok CSV file."
+    )
+
+    parser.add_argument(
+        "--facebook",
+        help="Path to the Facebook CSV file."
+    )
+
+    parser.add_argument(
+        "--output",
+        default="data/processed/multi_platform_results.csv",
+        help="Path to save the sentiment analysis results."
+    )
+
+    args = parser.parse_args()
+
     input_files = {
-        "reddit": "data/raw/reddit_sample.csv",
-        "tiktok": "data/raw/tiktok_sample.csv",
-        "facebook": "data/raw/facebook_sample.csv",
+        platform: file_path
+        for platform, file_path in {
+            "reddit": args.reddit,
+            "tiktok": args.tiktok,
+            "facebook": args.facebook,
+        }.items()
+        if file_path is not None
     }
 
-    output_path = "data/processed/multi_platform_results.csv"
+    if not input_files:
+        parser.error("Provide at least one platform CSV file.")
 
-    df = run_multi_platform_pipeline(input_files, output_path)
+    if len(input_files) == 1:
+        platform, input_path = next(iter(input_files.items()))
+        logger.info("Running single-platform pipeline: %s", platform)
+        df = run_pipeline(input_path, args.output)
+    else:
+        logger.info("Running multi-platform pipeline.")
+        df = run_multi_platform_pipeline(input_files, args.output)
 
     print(f"Processed {len(df)} posts.")
-    print("\nSentiment distribution:")
-    print(df["label"].value_counts())
-    print(f"\nResults saved to {output_path}")
+    print(f"Results saved to {args.output}")
+
+
+if __name__ == "__main__":
+    main()
