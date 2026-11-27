@@ -91,6 +91,13 @@ if st.sidebar.button("Run Sentiment Analysis", type="primary"):
                 f"Successfully analyzed {len(results)} posts."
             )
 
+            st.session_state["last_pipeline_run"] = {
+                "model": selected_model,
+                "platforms": selected_platforms.copy(),
+                "remove_duplicates": remove_duplicates,
+                "post_count": len(results),
+            }
+
             # Clear cached data so the dashboard loads the new results.
             st.cache_data.clear()
             st.rerun()
@@ -100,6 +107,29 @@ if st.sidebar.button("Run Sentiment Analysis", type="primary"):
 
 if "pipeline_message" in st.session_state:
     st.success(st.session_state.pop("pipeline_message"))
+
+if "last_pipeline_run" in st.session_state:
+    last_run = st.session_state["last_pipeline_run"]
+
+    st.sidebar.caption("Last successful run")
+
+    st.sidebar.write(
+        f"**Model:** {last_run['model']}"
+    )
+
+    st.sidebar.write(
+        f"**Platforms:** {', '.join(last_run['platforms'])}"
+    )
+
+    st.sidebar.write(
+        f"**Duplicate removal:** "
+        f"{'Enabled' if last_run['remove_duplicates'] else 'Disabled'}"
+    )
+
+    st.sidebar.write(
+        f"**Posts analyzed:** {last_run['post_count']:,}"
+    )
+
 
 st.title("Social Media Sentiment Analysis")
 
