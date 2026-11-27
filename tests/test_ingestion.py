@@ -74,7 +74,6 @@ class TestIngestion(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "empty"):
                 load_platform_data(file_path, "Reddit")
 
-
     def test_csv_with_headers_only(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = Path(temp_dir) / "empty.csv"
@@ -82,7 +81,6 @@ class TestIngestion(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "no data rows"):
                 load_platform_data(file_path, "Reddit")
-
 
     def test_malformed_csv(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -92,6 +90,27 @@ class TestIngestion(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Malformed CSV"):
                 load_platform_data(file_path, "Reddit")
 
+    def test_column_names_are_normalized(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "reddit.csv"
+
+            file_path.write_text(" Text , Username \nHello, user1\n")
+
+            result = load_platform_data(file_path, "Reddit")
+
+            self.assertIn("text", result.columns)
+            self.assertIn("username", result.columns)
+            self.assertEqual(result["platform"].iloc[0], "reddit")
+
+    def test_duplicate_columns_after_normalization(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "duplicate.csv"
+
+            file_path.write_text("text, Text \nHello,Hi\n")
+
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                load_platform_data(file_path, "Reddit")
+                
 
 if __name__ == "__main__":
     unittest.main()

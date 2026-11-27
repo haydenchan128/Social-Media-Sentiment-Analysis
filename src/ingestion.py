@@ -22,6 +22,15 @@ def load_platform_data(file_path: str, platform: str) -> pd.DataFrame:
     except UnicodeDecodeError as exc:
         raise ValueError("CSV file must use a supported text encoding.") from exc
 
+    # Standardize column names
+    df.columns = df.columns.str.strip().str.lower()
+
+    # Check for duplicate column names after normalization
+    if df.columns.duplicated().any():
+        raise ValueError(
+            "Dataset contains duplicate column names after normalization."
+        )
+
     if df.empty:
         raise ValueError("Dataset contains no data rows.")
 
