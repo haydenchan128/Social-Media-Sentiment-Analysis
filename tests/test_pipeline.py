@@ -174,6 +174,23 @@ class TestPipeline(unittest.TestCase):
 
             self.assertEqual(len(result), 3)
 
+    def test_pipeline_rejects_unsupported_model(self):
+        df = pd.DataFrame({
+            "text": ["This is a test."],
+        })
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "results.csv"
+
+            with self.assertRaisesRegex(ValueError, "Unsupported sentiment model"):
+                analyze_dataframe(
+                    df,
+                    str(output_path),
+                    model="invalid",
+                )
+
+            self.assertFalse(output_path.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

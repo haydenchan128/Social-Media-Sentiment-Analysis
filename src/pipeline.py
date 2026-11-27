@@ -19,6 +19,7 @@ def analyze_dataframe(
     df: pd.DataFrame,
     output_path: str,
     remove_duplicates: bool = True,
+    model: str = "vader",
 ) -> pd.DataFrame:
     """Analyze sentiment for a DataFrame and save the results."""
 
@@ -48,11 +49,27 @@ def analyze_dataframe(
 
         df["clean_text"] = df["text"].apply(clean_text)
 
-        analyzer = SentimentAnalyzer()
-        results = df["clean_text"].apply(analyzer.analyze)
+        model = model.lower().strip()
 
-        sentiment_df = pd.DataFrame(results.tolist())
+        if model == "vader":
+            analyzer = SentimentAnalyzer()
+            results = df["clean_text"].apply(analyzer.analyze)
+            sentiment_df = pd.DataFrame(results.tolist())
+
+        elif model == "transformer":
+            from src.transformer_sentiment import TransformerSentimentAnalyzer
+
+            analyzer = TransformerSentimentAnalyzer()
+            results = analyzer.analyze_many(df["clean_text"].tolist())
+            sentiment_df = pd.DataFrame(results)
+
+        else:
+            raise ValueError(
+                "Unsupported sentiment model. Choose 'vader' or 'transformer'."
+            )
+
         df = pd.concat([df, sentiment_df], axis=1)
+        df["model_used"] = model
 
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -73,6 +90,7 @@ def run_pipeline(
     input_path: str,
     output_path: str,
     remove_duplicates: bool = True,
+    model: str = "vader",
 ) -> pd.DataFrame:
     """Load one CSV file, analyze sentiment, and save results."""
 
@@ -84,6 +102,7 @@ def run_pipeline(
             df,
             output_path,
             remove_duplicates=remove_duplicates,
+            model=model,
         )
 
     except pd.errors.EmptyDataError as exc:
@@ -107,6 +126,7 @@ def run_multi_platform_pipeline(
     input_files: dict[str, str],
     output_path: str,
     remove_duplicates: bool = True,
+    model: str = "vader",
 ) -> pd.DataFrame:
     """Load, combine, and analyze data from multiple platforms."""
 
@@ -131,6 +151,7 @@ def run_multi_platform_pipeline(
             combined_df,
             output_path,
             remove_duplicates=remove_duplicates,
+            model=model,
         )
 
     except Exception:
@@ -170,6 +191,13 @@ def main():
         help="Keep duplicate posts instead of removing them.",
     )
 
+    parser.add_argument(
+        "--model",
+        choices=["vader", "transformer"],
+        default="vader",
+        help="Sentiment analysis model to use.",
+    )
+
     args = parser.parse_args()
     remove_duplicates = not args.keep_duplicates
 
@@ -193,6 +221,7 @@ def main():
             input_path,
             args.output,
             remove_duplicates=remove_duplicates,
+            model=args.model,
         )
     else:
         logger.info("Running multi-platform pipeline.")
@@ -200,6 +229,7 @@ def main():
             input_files,
             args.output,
             remove_duplicates=remove_duplicates,
+            model=args.model,
         )
 
     print(f"Processed {len(df)} posts.")
