@@ -1,8 +1,5 @@
 import re
 
-from transformers import pipeline
-
-
 MODEL_NAME = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 
 
@@ -16,14 +13,18 @@ def preprocess_for_transformer(text: str) -> str:
 
 class TransformerSentimentAnalyzer:
     def __init__(self, model_name: str = MODEL_NAME, classifier=None):
-        """Initialize the transformer sentiment analyzer."""
         self.model_name = model_name
 
-        self.classifier = classifier or pipeline(
-            "text-classification",
-            model=model_name,
-            tokenizer=model_name,
+        if classifier is None:
+            from transformers import pipeline
+
+            classifier = pipeline(
+                "text-classification",
+                model=model_name,
+                tokenizer=model_name,
         )
+
+        self.classifier = classifier
 
     def analyze_many(self, texts: list[str]) -> list[dict]:
         """Analyze multiple posts using batch predictions."""
