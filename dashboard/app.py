@@ -3,8 +3,22 @@ import pandas as pd
 import streamlit as st
 import json
 
+from src.pipeline import run_multi_platform_pipeline
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
+PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
+
+PIPELINE_OUTPUT_PATH = PROCESSED_DATA_DIR / "sentiment_results.csv"
+
+PLATFORM_FILES = {
+    "Reddit": RAW_DATA_DIR / "reddit_sample.csv",
+    "TikTok": RAW_DATA_DIR / "tiktok_sample.csv",
+    "Facebook": RAW_DATA_DIR / "facebook_sample.csv",
+}
+
 DATA_PATH = PROJECT_ROOT / "data" / "processed" / "sentiment_results.csv"
 
 VADER_METRICS_PATH = (
@@ -25,6 +39,59 @@ st.set_page_config(
     page_icon="📊",
     layout="wide",
 )
+
+st.sidebar.header("Pipeline Settings")
+
+# Only show platforms whose sample CSV files exist.
+available_platforms = [
+    platform
+    for platform, file_path in PLATFORM_FILES.items()
+    if file_path.exists()
+]
+
+selected_platforms = st.sidebar.multiselect(
+    "Select platforms",
+    options=available_platforms,
+    default=available_platforms,
+)
+
+remove_duplicates = st.sidebar.checkbox(
+    "Remove duplicate posts",
+    value=True,
+)
+
+st.sidebar.divider()
+
+if st.sidebar.button("Run Sentiment Analysis", type="primary"):
+    if not selected_platforms:
+        st.sidebar.warning("Select at least one platform.")
+    else:
+        input_files = {
+            platform.lower(): str(PLATFORM_FILES[platform])
+            for platform in selected_platforms
+        }
+
+        try:
+            with st.spinner("Running sentiment analysis..."):
+                results = run_multi_platform_pipeline(
+                    input_files=input_files,
+                    output_path=str(PIPELINE_OUTPUT_PATH),
+                    remove_duplicates=remove_duplicates,
+                )
+
+            st.session_state["pipeline_message"] = (
+                f"Successfully analyzed {len(results)} posts."
+            )
+
+            # Clear cached data so the dashboard loads the new results.
+            st.cache_data.clear()
+            st.rerun()
+
+        except Exception as exc:
+            st.sidebar.error(f"Pipeline failed: {exc}")
+
+if "pipeline_message" in st.session_state:
+    st.success(st.session_state.pop("pipeline_message"))
 
 st.title("Social Media Sentiment Analysis")
 st.write(
