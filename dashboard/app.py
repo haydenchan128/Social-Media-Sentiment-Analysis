@@ -2,6 +2,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 import json
+from datetime import datetime
 
 from src.pipeline import run_multi_platform_pipeline
 
@@ -96,6 +97,9 @@ if st.sidebar.button("Run Sentiment Analysis", type="primary"):
                 "platforms": selected_platforms.copy(),
                 "remove_duplicates": remove_duplicates,
                 "post_count": len(results),
+                "timestamp": datetime.now().astimezone().strftime(
+                    "%b %d, %Y at %I:%M %p"
+                ),
             }
 
             # Clear cached data so the dashboard loads the new results.
@@ -112,6 +116,10 @@ if "last_pipeline_run" in st.session_state:
     last_run = st.session_state["last_pipeline_run"]
 
     st.sidebar.caption("Last successful run")
+
+    st.sidebar.write(
+        f"**Last run:** {last_run['timestamp']}"
+    )
 
     st.sidebar.write(
         f"**Model:** {last_run['model']}"
