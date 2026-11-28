@@ -1,5 +1,6 @@
-# Virtual environment
+# Virtual environments
 .venv/
+venv/
 
 # Python
 __pycache__/
@@ -8,8 +9,9 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
-# Environment variables
+# Environment variables and secrets
 .env
+.env.*
 
 # Generated data
 data/processed/
@@ -22,3 +24,8 @@ data/processed/
 
 # Generated logs
 logs/
+*.log
+
+# Local Docker overrides
+docker-compose.override.yml
+compose.override.yaml

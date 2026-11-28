@@ -1,9 +1,27 @@
+# Git
 .git/
 .github/
-__pycache__/
-*.pyc
-.DS_Store
+
+# Python environments
 .venv/
 venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# OS and IDE files
+.DS_Store
+.vscode/
+
+# Logs
 logs/
+*.log
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Data mounted through Docker Compose
 data/raw/
+data/processed/

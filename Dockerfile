@@ -14,4 +14,4 @@ COPY . .
 EXPOSE 8501
 
 # Launch the dashboard
-CMD ["streamlit", "run", "dashboard/app.py", "--server.address=0.0.0.0"]
+CMD ["python", "-m", "streamlit", "run", "dashboard/app.py", "--server.address=0.0.0.0"]
